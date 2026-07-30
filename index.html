@@ -209,7 +209,7 @@ function drawWave(canvas, data, progress) {
     const x = i * (bw + gap);
     // A floor of 2px so silence still reads as a track rather than a hole.
     const bh = Math.max(2, data[i] * (h - 6));
-    g.fillStyle = x + bw <= cut ? played : (x < cut ? played : ahead);
+    g.fillStyle = x < cut ? played : ahead;
     g.beginPath();
     const r = Math.min(bw / 2, 2);
     g.roundRect(x, mid - bh / 2, bw, bh, r);
@@ -219,7 +219,19 @@ function drawWave(canvas, data, progress) {
 
 // ── page ───────────────────────────────────────────────────────────────────
 
-let audio, canvas, wrap, data = null, objectUrl = null;
+let audio, canvas, wrap, data = null, objectUrl = null, _ac = null;
+
+/** The page's single AudioContext, created on first use. */
+function ctx() {
+  if (!_ac) {
+    const AC = window.AudioContext || window.webkitAudioContext;
+    _ac = new AC();
+  }
+  // Created before any interaction it starts suspended; decoding works either
+  // way, but resuming keeps it from being reclaimed on some browsers.
+  if (_ac.state === "suspended") _ac.resume().catch(() => {});
+  return _ac;
+}
 
 async function loadAudio(url) {
   if (objectUrl) { URL.revokeObjectURL(objectUrl); objectUrl = null; }
@@ -234,10 +246,13 @@ async function loadAudio(url) {
   audio.src = objectUrl;
 
   try {
-    const AC = window.AudioContext || window.webkitAudioContext;
-    // ⚠️ decodeAudioData detaches the buffer it is handed. Pass the original and
-    // the Blob above ends up reading from nothing.
-    const decoded = await new AC().decodeAudioData(bytes.slice(0));
+    // ⚠️ ONE AudioContext for the life of the page, not one per load. The first
+    // version built a new one on every call, and a browser caps a document at
+    // about six: a visitor comparing the full mix against a 30 and a 15 would
+    // hit the ceiling, `new AudioContext()` would throw, and the waveform — the
+    // whole point of this page — would quietly stop being drawn while playback
+    // carried on. Silent degradation of the headline feature.
+    const decoded = await ctx().decodeAudioData(bytes.slice(0));
     data = peaks(decoded, BARS);
   } catch (_) {
     // No waveform is survivable; a broken page is not.

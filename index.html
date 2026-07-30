@@ -1,0 +1,357 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>AINSOF</title>
+<!--
+  The page a customer lands on when they click "listen".
+
+  Or, 30.7.2026: "תעשה נגן שרואים גל קול אמיתי".
+
+  ⚠️ REAL, and that word is the whole specification. It would have been quicker to
+  animate some bars to a timer and call it a waveform, and a music supervisor
+  would spot it in about a second — the peaks would not line up with what they
+  were hearing. So the file is decoded with the Web Audio API and the peaks are
+  measured from the samples. What is drawn IS the audio.
+
+  ⚠️ The file is fetched ONCE. decodeAudioData needs an ArrayBuffer and the
+  <audio> element needs a URL, and doing those separately downloads two megabytes
+  twice. One fetch, a Blob URL for playback, and a copy of the buffer for the
+  decoder — copied deliberately, because decodeAudioData detaches what it is
+  given and the Blob would be reading from a corpse.
+
+  ⚠️ ONE page for the whole catalogue, not one per track. Or asked directly:
+  "לכל טראק נעשה דף?". 772 generated pages go stale on the next release; this
+  reads the track from the address and fetches the rest live.
+
+      …/play/#AIN-CAT_057_001
+
+  ⚠️ Loads nothing external. No CDN, no web font, no analytics — only our own API
+  and our own storage. Today a chat client generated its own player for our
+  results and its content policy silently blocked our audio host. A page that
+  depends on nothing cannot fail that way.
+
+  ⚠️ Works from file:// as well as over http, because the first place it gets
+  opened is a desktop. No modules, no build step, one document.
+-->
+<style>
+  :root { color-scheme: dark }
+  * { box-sizing: border-box }
+  body {
+    margin: 0; min-height: 100vh; padding: 26px 20px;
+    display: flex; align-items: center; justify-content: center;
+    background: radial-gradient(120% 90% at 50% 0%, #17171d 0%, #0b0b0e 62%);
+    color: #ececf0;
+    font: 16px/1.55 ui-sans-serif, -apple-system, system-ui, "Segoe UI", sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  .card { width: 100%; max-width: 440px; text-align: center }
+
+  .artwrap { border-radius: 18px; overflow: hidden; background: #17171d;
+             box-shadow: 0 24px 60px rgba(0,0,0,.55) }
+  .art { width: 100%; aspect-ratio: 1; object-fit: cover; display: block }
+  .art.none { display: flex; align-items: center; justify-content: center;
+              letter-spacing: .38em; font-size: 12px; color: #5d5d6e }
+
+  h1 { font-size: 25px; line-height: 1.25; margin: 22px 0 6px; font-weight: 650;
+       letter-spacing: -.01em }
+  .album { color: #a8a8b8; font-size: 15px; margin: 0 0 6px }
+  .meta  { color: #74748a; font-size: 13px; margin: 0 0 20px }
+  .meta span { white-space: nowrap }
+
+  /* ── the waveform ─────────────────────────────────────────────────────── */
+  .wave { position: relative; height: 82px; margin: 0 0 6px; cursor: pointer;
+          border-radius: 10px }
+  .wave canvas { width: 100%; height: 100%; display: block }
+  .wave.loading::after {
+    content: ""; position: absolute; inset: 0; border-radius: 10px;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,.06), transparent);
+    background-size: 220% 100%; animation: sweep 1.25s linear infinite;
+  }
+  @keyframes sweep { from { background-position: 120% 0 } to { background-position: -120% 0 } }
+
+  .times { display: flex; justify-content: space-between;
+           font-variant-numeric: tabular-nums; font-size: 12px; color: #6e6e82;
+           margin-bottom: 16px }
+
+  .row { display: flex; align-items: center; justify-content: center; gap: 14px }
+  .play {
+    width: 54px; height: 54px; border-radius: 50%; border: 0; cursor: pointer;
+    background: #ececf0; color: #14141a; display: grid; place-items: center;
+    transition: transform .1s, background .12s;
+  }
+  .play:hover { transform: scale(1.05) }
+  .play svg { width: 21px; height: 21px; fill: currentColor }
+
+  .vers { display: flex; gap: 7px; flex-wrap: wrap; justify-content: center;
+          margin-top: 18px }
+  .vers button {
+    font: inherit; font-size: 12.5px; padding: 6px 14px; border-radius: 999px;
+    cursor: pointer; color: #c9c9d6; background: rgba(255,255,255,.05);
+    border: 1px solid rgba(255,255,255,.11); transition: .12s;
+  }
+  .vers button:hover { background: rgba(255,255,255,.11); color: #fff }
+  .vers button[aria-current="true"] {
+    background: #ececf0; color: #16161a; border-color: transparent; font-weight: 600 }
+
+  .foot { margin-top: 24px; font-size: 12px; color: #5a5a6b; line-height: 1.85 }
+  .foot a { color: #8e8ea8; text-decoration: none }
+  .foot a:hover { text-decoration: underline }
+  .wm { display: inline-block; margin-bottom: 3px; padding: 3px 10px;
+        border-radius: 999px; background: rgba(255,255,255,.05);
+        border: 1px solid rgba(255,255,255,.08); font-size: 11px; color: #8a8a9c }
+
+  .err { padding: 44px 20px; color: #9a9aae }
+
+  @media (prefers-color-scheme: light) {
+    body { background: radial-gradient(120% 90% at 50% 0%, #fff 0%, #f1f1f4 62%);
+           color: #16161c }
+    .album { color: #5c5c6c }
+    .meta, .foot, .times { color: #7a7a8a }
+    .play { background: #16161c; color: #fff }
+    .vers button { color: #40404e; background: rgba(0,0,0,.04);
+                   border-color: rgba(0,0,0,.11) }
+    .vers button[aria-current="true"] { background: #16161c; color: #fff }
+  }
+</style>
+</head>
+<body>
+<div class="card" id="root"><div class="err">…</div></div>
+
+<script>
+const API = "https://xzckjzlmbdnvsxknbwea.supabase.co/functions/v1/ainsof-connect";
+const BARS = 128;
+
+const esc = (s) => String(s ?? "").replace(/[&<>"]/g,
+  (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+
+const clock = (sec) => {
+  const n = Math.max(0, Math.round(Number(sec) || 0));
+  return `${Math.floor(n / 60)}:${String(n % 60).padStart(2, "0")}`;
+};
+
+function label(v) {
+  const m = /^CUT_(\d+)$/.exec(v);
+  if (m) return `${m[1]}s`;
+  if (v === "MAIN") return "Full mix";
+  return v.split("_").map((w) => w[0] + w.slice(1).toLowerCase()).join(" ");
+}
+
+/** "#AIN-CAT_057_001" or "?t=…" -> the slug, or null. */
+function slug() {
+  const h = location.hash.replace(/^#/, "").trim();
+  return h || new URLSearchParams(location.search).get("t");
+}
+
+/** AIN-CAT_057_001 -> "AIN-CAT 057_001", which is how a track is keyed. */
+function trackId(s) {
+  const m = /^(AIN-[A-Z]+)_(\d+)_(\d+)$/i.exec(s || "");
+  return m ? `${m[1].toUpperCase()} ${m[2]}_${m[3]}` : null;
+}
+
+const audioUrl = (s, v) =>
+  `${API}/p/${s}${v && v !== "MAIN" ? "/" + v : ""}?raw=1`;
+
+// ── the waveform ───────────────────────────────────────────────────────────
+
+/**
+ * Peak amplitude per bar, measured from the decoded samples.
+ *
+ * ⚠️ Peak, not average. An average flattens a cue into a uniform sausage and
+ * every track ends up looking like every other one; the peak keeps the hits, the
+ * silences and the shape of the arrangement, which is the entire reason a
+ * supervisor glances at a waveform at all.
+ *
+ * ⚠️ Normalised against the loudest bar rather than against 1.0. These are
+ * production cues, often mixed quietly on purpose, and against an absolute
+ * ceiling a delicate piano piece would render as a flat line.
+ */
+function peaks(buffer, bars) {
+  const ch = buffer.getChannelData(0);
+  const step = Math.floor(ch.length / bars) || 1;
+  const out = new Array(bars).fill(0);
+  let max = 0;
+  for (let b = 0; b < bars; b++) {
+    const start = b * step;
+    const end = Math.min(start + step, ch.length);
+    let peak = 0;
+    // Every 16th sample: at 44.1kHz a bar spans thousands of samples and a true
+    // peak survives the decimation, while reading all of them stalls the page.
+    for (let i = start; i < end; i += 16) {
+      const v = ch[i] < 0 ? -ch[i] : ch[i];
+      if (v > peak) peak = v;
+    }
+    out[b] = peak;
+    if (peak > max) max = peak;
+  }
+  return max > 0 ? out.map((v) => v / max) : out;
+}
+
+function drawWave(canvas, data, progress) {
+  const dpr = window.devicePixelRatio || 1;
+  const w = canvas.clientWidth, h = canvas.clientHeight;
+  canvas.width = w * dpr; canvas.height = h * dpr;
+  const g = canvas.getContext("2d");
+  g.scale(dpr, dpr);
+  g.clearRect(0, 0, w, h);
+
+  const light = matchMedia("(prefers-color-scheme: light)").matches;
+  const played = light ? "#16161c" : "#ececf0";
+  const ahead  = light ? "rgba(0,0,0,.16)" : "rgba(255,255,255,.19)";
+
+  const gap = 2;
+  const bw = Math.max(1, (w - gap * (data.length - 1)) / data.length);
+  const mid = h / 2;
+  const cut = progress * w;
+
+  for (let i = 0; i < data.length; i++) {
+    const x = i * (bw + gap);
+    // A floor of 2px so silence still reads as a track rather than a hole.
+    const bh = Math.max(2, data[i] * (h - 6));
+    g.fillStyle = x + bw <= cut ? played : (x < cut ? played : ahead);
+    g.beginPath();
+    const r = Math.min(bw / 2, 2);
+    g.roundRect(x, mid - bh / 2, bw, bh, r);
+    g.fill();
+  }
+}
+
+// ── page ───────────────────────────────────────────────────────────────────
+
+let audio, canvas, wrap, data = null, objectUrl = null;
+
+async function loadAudio(url) {
+  if (objectUrl) { URL.revokeObjectURL(objectUrl); objectUrl = null; }
+  data = null;
+  wrap.classList.add("loading");
+  drawWave(canvas, new Array(BARS).fill(0.06), 0);
+
+  const bytes = await (await fetch(url)).arrayBuffer();
+
+  // Playback first: if decoding fails the music must still work.
+  objectUrl = URL.createObjectURL(new Blob([bytes], { type: "audio/mpeg" }));
+  audio.src = objectUrl;
+
+  try {
+    const AC = window.AudioContext || window.webkitAudioContext;
+    // ⚠️ decodeAudioData detaches the buffer it is handed. Pass the original and
+    // the Blob above ends up reading from nothing.
+    const decoded = await new AC().decodeAudioData(bytes.slice(0));
+    data = peaks(decoded, BARS);
+  } catch (_) {
+    // No waveform is survivable; a broken page is not.
+    data = new Array(BARS).fill(0.12);
+  }
+  wrap.classList.remove("loading");
+  drawWave(canvas, data, 0);
+}
+
+function tick() {
+  if (data && audio.duration) {
+    drawWave(canvas, data, audio.currentTime / audio.duration);
+    document.getElementById("t-now").textContent = clock(audio.currentTime);
+    document.getElementById("t-end").textContent = clock(audio.duration);
+  }
+  requestAnimationFrame(tick);
+}
+
+const ICON_PLAY  = '<svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>';
+const ICON_PAUSE = '<svg viewBox="0 0 24 24"><path d="M6 5h4v14H6zM14 5h4v14h-4z"/></svg>';
+
+async function main() {
+  const s = slug();
+  const id = trackId(s);
+  if (!id) {
+    document.getElementById("root").innerHTML =
+      `<div class="err"><div class="wm" style="margin-bottom:14px">AINSOF</div><br>` +
+      `Ask your AI assistant for music from the AINSOF catalogue,<br>` +
+      `then open one of the listen links it gives you.<br><br>` +
+      `<a href="mailto:or@ainsof.io">or@ainsof.io</a></div>`;
+    return;
+  }
+
+  let t = null;
+  try {
+    const res = await fetch(API, {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ jsonrpc: "2.0", id: 1, method: "tools/call",
+        params: { name: "get_track", arguments: { track_id: id } } }),
+    });
+    t = JSON.parse((await res.json()).result.content[0].text);
+  } catch (_) { /* the music still has to play without the credits */ }
+
+  const c = t?.credits ?? {};
+  const title = c.title || t?.title || id;
+  const bits = [c.catalogue,
+                (c.composers ?? []).map((w) => w.name || w.composer).filter(Boolean).join(", "),
+                c.bpm ? `${Math.round(c.bpm)} BPM` : null].filter(Boolean);
+  const cover = c.album_cover_url || t?.album_cover_url;
+  const versions = (t?.versions ?? []).map((v) => v.version || v).filter(Boolean);
+  const all = ["MAIN", ...versions.filter((v) => v !== "MAIN")];
+
+  document.title = `${title} — AINSOF`;
+  document.getElementById("root").innerHTML = `
+    <div class="artwrap">${cover
+      ? `<img class="art" src="${esc(cover)}" alt=""
+             onerror="this.outerHTML='<div class=&quot;art none&quot;>AINSOF</div>'">`
+      : `<div class="art none">AINSOF</div>`}</div>
+    <h1>${esc(title)}</h1>
+    ${c.album ? `<p class="album">${esc(c.album)}</p>` : ""}
+    ${bits.length ? `<p class="meta">${bits.map((b) => `<span>${esc(b)}</span>`)
+                       .join("&nbsp; · &nbsp;")}</p>` : ""}
+    <div class="wave loading" id="wave"><canvas id="cv"></canvas></div>
+    <div class="times"><span id="t-now">0:00</span><span id="t-end">0:00</span></div>
+    <div class="row"><button class="play" id="pp" aria-label="Play">${ICON_PLAY}</button></div>
+    ${all.length > 1 ? `<div class="vers">${all.map((v, i) =>
+        `<button data-v="${esc(v)}" ${i === 0 ? 'aria-current="true"' : ""}>${
+          esc(label(v))}</button>`).join("")}</div>` : ""}
+    <audio id="a" preload="auto"></audio>
+    <p class="foot"><span class="wm">Watermarked preview</span><br>
+      Not licensed for release. To licence this cue —
+      <a href="mailto:or@ainsof.io?subject=${encodeURIComponent(title + " — licensing")}"
+        >or@ainsof.io</a></p>`;
+
+  audio  = document.getElementById("a");
+  canvas = document.getElementById("cv");
+  wrap   = document.getElementById("wave");
+  const pp = document.getElementById("pp");
+
+  pp.onclick = () => audio.paused ? audio.play() : audio.pause();
+  audio.onplay  = () => { pp.innerHTML = ICON_PAUSE; pp.setAttribute("aria-label", "Pause"); };
+  audio.onpause = () => { pp.innerHTML = ICON_PLAY;  pp.setAttribute("aria-label", "Play"); };
+  audio.onended = () => { pp.innerHTML = ICON_PLAY; };
+
+  wrap.onclick = (e) => {
+    if (!audio.duration) return;
+    const r = wrap.getBoundingClientRect();
+    audio.currentTime = ((e.clientX - r.left) / r.width) * audio.duration;
+  };
+
+  document.querySelectorAll("[data-v]").forEach((b) => {
+    b.onclick = async () => {
+      document.querySelectorAll("[data-v]").forEach((x) => x.removeAttribute("aria-current"));
+      b.setAttribute("aria-current", "true");
+      const wasPlaying = !audio.paused;
+      await loadAudio(audioUrl(s, b.dataset.v));
+      if (wasPlaying) audio.play().catch(() => {});
+    };
+  });
+
+  addEventListener("resize", () => data && drawWave(canvas, data,
+    audio.duration ? audio.currentTime / audio.duration : 0));
+
+  tick();
+  await loadAudio(audioUrl(s, "MAIN"));
+  // Autoplay is blocked until the visitor has interacted, and that is correct of
+  // the browser. Arriving from a click usually counts; when it does not, the
+  // waveform and a large play button are unmistakably a player — which is what
+  // the blank tab this replaced was missing.
+  audio.play().catch(() => {});
+}
+
+addEventListener("hashchange", main);
+main();
+</script>
+</body>
+</html>

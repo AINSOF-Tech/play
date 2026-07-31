@@ -144,10 +144,23 @@ function slug() {
   return h || new URLSearchParams(location.search).get("t");
 }
 
-/** AIN-CAT_057_001 -> "AIN-CAT 057_001", which is how a track is keyed. */
-function trackId(s) {
-  const m = /^(AIN-[A-Z]+)_(\d+)_(\d+)$/i.exec(s || "");
-  return m ? `${m[1].toUpperCase()} ${m[2]}_${m[3]}` : null;
+/**
+ * "AIN-CAT_057_001" or "AIN-CAT_057_001/CUT_30" -> {id, version}.
+ *
+ * ⚠️ The version half exists because every cutdown and every stem gets its own
+ * link, and those links have to open ON that version rather than on the full mix.
+ * The first draft of this parser rejected anything with a slash, which would have
+ * broken every stem link the moment they were published.
+ */
+function parseSlug(raw) {
+  const [core, version] = String(raw || "").split("/");
+  const m = /^(AIN-[A-Z]+)_(\d+)_(\d+)$/i.exec(core || "");
+  if (!m) return null;
+  return {
+    id: `${m[1].toUpperCase()} ${m[2]}_${m[3]}`,
+    core,
+    version: /^[A-Z0-9_]{1,24}$/i.test(version || "") ? version.toUpperCase() : "MAIN",
+  };
 }
 
 const audioUrl = (s, v) =>
@@ -275,9 +288,9 @@ const ICON_PLAY  = '<svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>';
 const ICON_PAUSE = '<svg viewBox="0 0 24 24"><path d="M6 5h4v14H6zM14 5h4v14h-4z"/></svg>';
 
 async function main() {
-  const s = slug();
-  const id = trackId(s);
-  if (!id) {
+  const raw = slug();
+  const parsed = parseSlug(raw);
+  if (!parsed) {
     document.getElementById("root").innerHTML =
       `<div class="err"><div class="wm" style="margin-bottom:14px">AINSOF</div><br>` +
       `Ask your AI assistant for music from the AINSOF catalogue,<br>` +
@@ -285,6 +298,8 @@ async function main() {
       `<a href="mailto:or@ainsof.io">or@ainsof.io</a></div>`;
     return;
   }
+  const { id, core, version: startVersion } = parsed;
+  const s = core;
 
   let t = null;
   try {
@@ -304,6 +319,12 @@ async function main() {
   const cover = c.album_cover_url || t?.album_cover_url;
   const versions = (t?.versions ?? []).map((v) => v.version || v).filter(Boolean);
   const all = ["MAIN", ...versions.filter((v) => v !== "MAIN")];
+  // Open on whichever version the link named.
+  // ⚠️ Matched case-insensitively. The slug is upper-cased on the way in, and a
+  // version stored as "Cut_30" rather than "CUT_30" would otherwise fall silently
+  // back to the full mix — a link that looks like it worked and played the wrong
+  // thing, which is worse than one that fails loudly.
+  const start = all.find((v) => v.toUpperCase() === startVersion) ?? "MAIN";
 
   document.title = `${title} — AINSOF`;
   document.getElementById("root").innerHTML = `
@@ -318,8 +339,8 @@ async function main() {
     <div class="wave loading" id="wave"><canvas id="cv"></canvas></div>
     <div class="times"><span id="t-now">0:00</span><span id="t-end">0:00</span></div>
     <div class="row"><button class="play" id="pp" aria-label="Play">${ICON_PLAY}</button></div>
-    ${all.length > 1 ? `<div class="vers">${all.map((v, i) =>
-        `<button data-v="${esc(v)}" ${i === 0 ? 'aria-current="true"' : ""}>${
+    ${all.length > 1 ? `<div class="vers">${all.map((v) =>
+        `<button data-v="${esc(v)}" ${v === start ? 'aria-current="true"' : ""}>${
           esc(label(v))}</button>`).join("")}</div>` : ""}
     <audio id="a" preload="auto"></audio>
     <p class="foot"><span class="wm">Watermarked preview</span><br>
@@ -357,7 +378,7 @@ async function main() {
     audio.duration ? audio.currentTime / audio.duration : 0));
 
   tick();
-  await loadAudio(audioUrl(s, "MAIN"));
+  await loadAudio(audioUrl(s, start));
   // Autoplay is blocked until the visitor has interacted, and that is correct of
   // the browser. Arriving from a click usually counts; when it does not, the
   // waveform and a large play button are unmistakably a player — which is what

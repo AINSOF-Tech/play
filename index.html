@@ -4,6 +4,10 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>AINSOF</title>
+<link rel="icon" type="image/png" href="/favicon-96x96.png" sizes="96x96">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<link rel="shortcut icon" href="/favicon.ico">
+<link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
 <!--
   The page a customer lands on when they click "listen".
 
@@ -36,28 +40,36 @@
   opened is a desktop. No modules, no build step, one document.
 -->
 <style>
-  :root { color-scheme: dark }
+  /* ⚠️ Palette taken verbatim from Or's own site (~/Desktop/AIN/ainsof-site),
+     not chosen here. He asked for it explicitly: "חייב אותם צבעים של דף
+     הנחיתה". A listen link opens straight out of a chat, so it has to look like
+     the same company answered. */
+  :root {
+    color-scheme: dark;
+    --bg:#101013; --surface:#17171b; --line:rgba(255,255,255,.075);
+    --ink:#fff; --coral:#d9895f; --coral-dim:rgba(217,137,95,.16); --r:14px;
+  }
   * { box-sizing: border-box }
   body {
     margin: 0; min-height: 100vh; padding: 26px 20px;
     display: flex; align-items: center; justify-content: center;
-    background: radial-gradient(120% 90% at 50% 0%, #17171d 0%, #0b0b0e 62%);
-    color: #ececf0;
+    background: radial-gradient(120% 90% at 50% -5%, #1a1a1f 0%, var(--bg) 62%);
+    color: var(--ink);
     font: 16px/1.55 ui-sans-serif, -apple-system, system-ui, "Segoe UI", sans-serif;
     -webkit-font-smoothing: antialiased;
   }
   .card { width: 100%; max-width: 440px; text-align: center }
 
-  .artwrap { border-radius: 18px; overflow: hidden; background: #17171d;
+  .artwrap { border-radius: var(--r); overflow: hidden; background: var(--surface);
              box-shadow: 0 24px 60px rgba(0,0,0,.55) }
   .art { width: 100%; aspect-ratio: 1; object-fit: cover; display: block }
   .art.none { display: flex; align-items: center; justify-content: center;
-              letter-spacing: .38em; font-size: 12px; color: #5d5d6e }
+              letter-spacing: .19em; font-size: 12px; color: rgba(255,255,255,.4) }
 
   h1 { font-size: 25px; line-height: 1.25; margin: 22px 0 6px; font-weight: 650;
        letter-spacing: -.01em }
-  .album { color: #a8a8b8; font-size: 15px; margin: 0 0 6px }
-  .meta  { color: #74748a; font-size: 13px; margin: 0 0 20px }
+  .album { color: rgba(255,255,255,.66); font-size: 15px; margin: 0 0 6px }
+  .meta  { color: rgba(255,255,255,.42); font-size: 13px; margin: 0 0 20px }
   .meta span { white-space: nowrap }
 
   /* ── the waveform ─────────────────────────────────────────────────────── */
@@ -72,13 +84,13 @@
   @keyframes sweep { from { background-position: 120% 0 } to { background-position: -120% 0 } }
 
   .times { display: flex; justify-content: space-between;
-           font-variant-numeric: tabular-nums; font-size: 12px; color: #6e6e82;
+           font-variant-numeric: tabular-nums; font-size: 12px; color: rgba(255,255,255,.4);
            margin-bottom: 16px }
 
   .row { display: flex; align-items: center; justify-content: center; gap: 14px }
   .play {
     width: 54px; height: 54px; border-radius: 50%; border: 0; cursor: pointer;
-    background: #ececf0; color: #14141a; display: grid; place-items: center;
+    background: var(--coral); color: #14141a; display: grid; place-items: center;
     transition: transform .1s, background .12s;
   }
   .play:hover { transform: scale(1.05) }
@@ -88,21 +100,21 @@
           margin-top: 18px }
   .vers button {
     font: inherit; font-size: 12.5px; padding: 6px 14px; border-radius: 999px;
-    cursor: pointer; color: #c9c9d6; background: rgba(255,255,255,.05);
-    border: 1px solid rgba(255,255,255,.11); transition: .12s;
+    cursor: pointer; color: rgba(255,255,255,.75); background: rgba(255,255,255,.05);
+    border: 1px solid var(--line); transition: .12s;
   }
   .vers button:hover { background: rgba(255,255,255,.11); color: #fff }
   .vers button[aria-current="true"] {
-    background: #ececf0; color: #16161a; border-color: transparent; font-weight: 600 }
+    background: var(--coral); color: #14141a; border-color: transparent; font-weight: 600 }
 
-  .foot { margin-top: 24px; font-size: 12px; color: #5a5a6b; line-height: 1.85 }
-  .foot a { color: #8e8ea8; text-decoration: none }
+  .foot { margin-top: 24px; font-size: 12px; color: rgba(255,255,255,.38); line-height: 1.85 }
+  .foot a { color: var(--coral); text-decoration: none }
   .foot a:hover { text-decoration: underline }
   .wm { display: inline-block; margin-bottom: 3px; padding: 3px 10px;
-        border-radius: 999px; background: rgba(255,255,255,.05);
-        border: 1px solid rgba(255,255,255,.08); font-size: 11px; color: #8a8a9c }
+        border-radius: 999px; background: var(--coral-dim);
+        border: 1px solid var(--line); font-size: 11px; color: var(--coral) }
 
-  .err { padding: 44px 20px; color: #9a9aae }
+  .err { padding: 44px 20px; color: rgba(255,255,255,.55) }
 
   @media (prefers-color-scheme: light) {
     body { background: radial-gradient(120% 90% at 50% 0%, #fff 0%, #f1f1f4 62%);
@@ -210,8 +222,9 @@ function drawWave(canvas, data, progress) {
   g.clearRect(0, 0, w, h);
 
   const light = matchMedia("(prefers-color-scheme: light)").matches;
-  const played = light ? "#16161c" : "#ececf0";
-  const ahead  = light ? "rgba(0,0,0,.16)" : "rgba(255,255,255,.19)";
+  // Coral for what has played — the same accent as the site.
+  const played = "#d9895f";
+  const ahead  = light ? "rgba(0,0,0,.16)" : "rgba(255,255,255,.17)";
 
   const gap = 2;
   const bw = Math.max(1, (w - gap * (data.length - 1)) / data.length);

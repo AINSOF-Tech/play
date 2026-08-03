@@ -221,7 +221,11 @@
                 0 28px 54px -26px rgba(0,0,0,.95);
   }
 
-  .foot { margin-top: 24px; font-size: 12px; color: rgba(255,255,255,.38); line-height: 1.85 }
+  /* ⚠️ Was rgba(255,255,255,.38) — 3.08:1 on this background, measured, against
+     the 4.5:1 small text needs. This is the line that says the file is not
+     cleared for release and where to write to licence it; it being the least
+     readable thing on the page was the wrong kind of quiet. #7b7b83 is 4.53:1. */
+  .foot { margin-top: 24px; font-size: 12px; color: #7b7b83; line-height: 1.85 }
   .foot a { color: var(--coral); text-decoration: none }
   .foot a:hover { text-decoration: underline }
   /* ⚠️ 3.8.2026 — Or: "הסימן מים שכתוב שם שים אותו בצורה יפה ועדינה".
@@ -250,7 +254,8 @@
     body { background: radial-gradient(120% 90% at 50% 0%, #fff 0%, #f1f1f4 62%);
            color: #16161c }
     .album { color: #5c5c6c }
-    .meta, .foot, .times { color: #7a7a8a }
+    /* #7a7a8a measured 3.74:1 here. #6d6d7b is 4.52:1 at the same weight. */
+    .meta, .foot, .times { color: #6d6d7b }
     /* ⚠️ .wm sets its own colour from --ink-2 (#9d9da8), which is tuned for the
        dark page and measures 2.38:1 on this one — below the 4.5:1 that small
        text needs, so the licence notice would be the least readable line on the

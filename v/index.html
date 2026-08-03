@@ -88,7 +88,11 @@ video{display:block;width:100%;max-height:74vh;background:#000}
   <p class="sub">Licensed AINSOF music, mixed to your picture.</p>
   <div class="frame" id="frame"><p class="bad" id="msg">Loading&hellip;</p></div>
   <div class="row" id="row" hidden>
-    <a class="btn" id="dl" href="#" download="ainsof-scored.mp4">Download <span>&darr;</span></a>
+    <!-- ⚠️ No `download` attribute. Browsers IGNORE it across origins, and this
+         page is on play.ainsof.io while the file is on mcp.ainsof.io — the
+         button would have opened a tab instead of saving. ?dl=1 makes storage
+         send Content-Disposition: attachment, which works cross-origin. -->
+    <a class="btn" id="dl" href="#">Download <span>&darr;</span></a>
     <a class="btn" href="https://ainsof.io/mcp">Score another <span>&rsaquo;</span></a>
   </div>
   <p class="note">
@@ -114,7 +118,7 @@ video{display:block;width:100%;max-height:74vh;background:#000}
   v.controls = true; v.playsInline = true; v.preload = 'metadata'; v.src = src;
   v.addEventListener('loadedmetadata', function(){
     msg.remove();
-    document.getElementById('dl').href = src;
+    document.getElementById('dl').href = src + '?dl=1';
     document.getElementById('row').hidden = false;
   });
   v.addEventListener('error', function(){

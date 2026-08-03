@@ -123,23 +123,41 @@
   .play:hover { transform: scale(1.05) }
   .play svg { width: 21px; height: 21px; fill: currentColor }
 
-  .vers { display: flex; gap: 7px; flex-wrap: wrap; justify-content: center;
-          margin-top: 18px }
+  /* ⚠️ 3.8.2026 — Or: "הכפתורים בדף הזה לא כמו הכפתורים באתר המקורי שלנו".
+     He was right. The download had been brought into line earlier the same day
+     but these were left: fully-rounded chips, and the selected one a solid coral
+     fill with dark text. The site does the opposite — a glass track holding the
+     row, each pill a soft rectangle, and the selected one marked by a CORAL
+     HAIRLINE over the same glass rather than by inverting it. Filling a pill
+     with brand colour is the loudest possible way to say "selected" and it is
+     not how anything else we own says it.
+     Copied from .pills / .pill on ainsof.io, scaled down for this page's smaller
+     row. Nothing invented here. */
+  .vers { display: inline-flex; gap: 5px; flex-wrap: wrap; justify-content: center;
+          margin-top: 18px; padding: 5px; border-radius: 15px;
+          background: rgba(255,255,255,.035);
+          -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px);
+          border: 1px solid rgba(255,255,255,.09) }
   .vers button {
-    font: inherit; font-size: 12.5px; padding: 6px 14px; border-radius: 999px;
-    cursor: pointer; color: rgba(255,255,255,.75); background: rgba(255,255,255,.05);
-    border: 1px solid var(--line); transition: .12s;
+    font: inherit; font-size: 13px; font-weight: 500; letter-spacing: -.015em;
+    padding: 9px 15px; border-radius: 10px; border: 0; background: none;
+    cursor: pointer; color: var(--ink-3);
+    transition: background .3s, color .3s, box-shadow .4s cubic-bezier(.16,1,.3,1);
   }
-  .vers button:hover { background: rgba(255,255,255,.11); color: #fff }
+  .vers button:hover { color: rgba(255,255,255,.82) }
   .vers button[aria-current="true"] {
-    background: var(--coral); color: #14141a; border-color: transparent; font-weight: 600 }
+    background: rgba(255,255,255,.07); color: #fff;
+    box-shadow: inset 0 0 0 1px var(--coral),
+                0 6px 0 -2px rgba(217,137,95,.14),
+                0 12px 0 -5px rgba(217,137,95,.06) }
 
   /* Two rows now instead of one, so each has to say what it is. Without a label,
      a row reading "Drums / Guitar / Piano" looks like alternative mixes rather
      than isolated instruments. */
   .grouplbl { margin: 22px 0 -4px; font-size: 10.5px; letter-spacing: .18em;
     text-transform: uppercase; color: rgba(255,255,255,.32) }
-  .vers.stems button { background: rgba(255,255,255,.03) }
+  /* The stems row is the same control, so it gets the same track. */
+  .vers.stems { background: rgba(255,255,255,.028) }
   /* ⚠️ 3.8.2026 — Or: "שים לב שהכפתורים האלה בדיוק אותו דבר יהיו גם בדף תצוגה
      של הנגן מוזיקה שלנו". This was a quiet underlined link, on the reasoning that
      a watermarked preview should not be offered like a master. That reasoning was
@@ -176,9 +194,12 @@
   .foot { margin-top: 24px; font-size: 12px; color: rgba(255,255,255,.38); line-height: 1.85 }
   .foot a { color: var(--coral); text-decoration: none }
   .foot a:hover { text-decoration: underline }
+  /* Same construction as the site's "Soon" tag: coral type inside a coral-dim
+     ring, no fill. A filled chip reads as a button you can press. */
   .wm { display: inline-block; margin-bottom: 3px; padding: 3px 10px;
-        border-radius: 999px; background: var(--coral-dim);
-        border: 1px solid var(--line); font-size: 11px; color: var(--coral) }
+        border-radius: 999px; background: none;
+        border: 1px solid var(--coral-dim); font-size: 10.5px; font-weight: 600;
+        letter-spacing: .14em; text-transform: uppercase; color: var(--coral) }
 
   .err { padding: 44px 20px; color: rgba(255,255,255,.55) }
   .brand { width: 62px; height: auto; display: block; margin: 0 auto 26px;
@@ -202,9 +223,11 @@
     .dl a:hover { background: rgba(0,0,0,.07);
       box-shadow: inset 0 0 0 1px var(--coral),
                   0 14px 30px -18px rgba(0,0,0,.55) }
-    .vers button { color: #40404e; background: rgba(0,0,0,.04);
+    .vers { background: rgba(0,0,0,.035); border-color: rgba(0,0,0,.1) }
+    .vers button { color: #40404e; background: none;
                    border-color: rgba(0,0,0,.11) }
-    .vers button[aria-current="true"] { background: #16161c; color: #fff }
+    .vers button[aria-current="true"] { background: rgba(0,0,0,.06); color: #14141a;
+      box-shadow: inset 0 0 0 1px var(--coral) }
   }
 </style>
 </head>

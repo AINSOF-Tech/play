@@ -115,13 +115,40 @@
            margin-bottom: 16px }
 
   .row { display: flex; align-items: center; justify-content: center; gap: 14px }
+  /* ⚠️ 3.8.2026 — Or: "הכפתור הזה לא דומה לשאר הכפתורים, יש לנו סיסטם דיזיין".
+     The last control on this page still outside it. It was a solid coral disc
+     with a dark glyph — the same "fill it with brand colour" move already
+     corrected on the version pills, and the loudest thing on a page whose
+     subject is the artwork above it.
+     Same glass as the download button and the site's .cta: white at low alpha,
+     an inset hairline, stacked highlights, and a deep drop. The coral moves to
+     the GLYPH, which is where the system puts it — .cta span is coral, and this
+     is the same idea at transport size. Round is kept: a play control is round
+     everywhere, and that is affordance rather than decoration.
+     Lifts on hover like every other button here instead of scaling, so the whole
+     page moves the same way. */
   .play {
-    width: 54px; height: 54px; border-radius: 50%; border: 0; cursor: pointer;
-    background: var(--coral); color: #14141a; display: grid; place-items: center;
-    transition: transform .1s, background .12s;
+    width: 60px; height: 60px; border-radius: 50%; border: 0; cursor: pointer;
+    background: rgba(255,255,255,.055);
+    -webkit-backdrop-filter: blur(16px); backdrop-filter: blur(16px);
+    color: var(--coral); display: grid; place-items: center;
+    box-shadow: inset 0 0 0 1px rgba(255,255,255,.15),
+                0 9px 0 -3px rgba(255,255,255,.05),
+                0 18px 0 -7px rgba(255,255,255,.028),
+                0 22px 46px -26px rgba(0,0,0,.9);
+    transition: transform .42s cubic-bezier(.16,1,.3,1),
+                box-shadow .42s cubic-bezier(.16,1,.3,1),
+                background .42s cubic-bezier(.16,1,.3,1);
   }
-  .play:hover { transform: scale(1.05) }
-  .play svg { width: 21px; height: 21px; fill: currentColor }
+  .play:hover {
+    transform: translateY(-3px); background: rgba(255,255,255,.085);
+    box-shadow: inset 0 0 0 1px var(--coral),
+                0 11px 0 -3px rgba(217,137,95,.16),
+                0 22px 0 -7px rgba(217,137,95,.07),
+                0 28px 54px -26px rgba(0,0,0,.95);
+  }
+  .play svg { width: 22px; height: 22px; fill: currentColor }
+  @media (prefers-reduced-motion: reduce) { .play { transition: none } }
 
   /* ⚠️ 3.8.2026 — Or: "הכפתורים בדף הזה לא כמו הכפתורים באתר המקורי שלנו".
      He was right. The download had been brought into line earlier the same day
@@ -214,7 +241,13 @@
            color: #16161c }
     .album { color: #5c5c6c }
     .meta, .foot, .times { color: #7a7a8a }
-    .play { background: #16161c; color: #fff }
+    /* Glass built from white alpha reads as a hole on a light background. */
+    .play { background: rgba(0,0,0,.045); color: var(--coral);
+      box-shadow: inset 0 0 0 1px rgba(0,0,0,.12),
+                  0 10px 26px -18px rgba(0,0,0,.5) }
+    .play:hover { background: rgba(0,0,0,.07);
+      box-shadow: inset 0 0 0 1px var(--coral),
+                  0 14px 30px -18px rgba(0,0,0,.55) }
     /* The glass button reads as a hole on a light background — it is built from
        white at low alpha. Same geometry, inverted ink. */
     .dl a { background: rgba(0,0,0,.045); color: #14141a;

@@ -115,44 +115,132 @@
            margin-bottom: 16px }
 
   .row { display: flex; align-items: center; justify-content: center; gap: 14px }
+  /* ⚠️ 3.8.2026 — Or: "הכפתור הזה לא דומה לשאר הכפתורים, יש לנו סיסטם דיזיין".
+     The last control on this page still outside it. It was a solid coral disc
+     with a dark glyph — the same "fill it with brand colour" move already
+     corrected on the version pills, and the loudest thing on a page whose
+     subject is the artwork above it.
+     Same glass as the download button and the site's .cta: white at low alpha,
+     an inset hairline, stacked highlights, and a deep drop. The coral moves to
+     the GLYPH, which is where the system puts it — .cta span is coral, and this
+     is the same idea at transport size. Round is kept: a play control is round
+     everywhere, and that is affordance rather than decoration.
+     Lifts on hover like every other button here instead of scaling, so the whole
+     page moves the same way. */
   .play {
-    width: 54px; height: 54px; border-radius: 50%; border: 0; cursor: pointer;
-    background: var(--coral); color: #14141a; display: grid; place-items: center;
-    transition: transform .1s, background .12s;
+    width: 60px; height: 60px; border-radius: 50%; border: 0; cursor: pointer;
+    background: rgba(255,255,255,.055);
+    -webkit-backdrop-filter: blur(16px); backdrop-filter: blur(16px);
+    color: var(--coral); display: grid; place-items: center;
+    box-shadow: inset 0 0 0 1px rgba(255,255,255,.15),
+                0 9px 0 -3px rgba(255,255,255,.05),
+                0 18px 0 -7px rgba(255,255,255,.028),
+                0 22px 46px -26px rgba(0,0,0,.9);
+    transition: transform .42s cubic-bezier(.16,1,.3,1),
+                box-shadow .42s cubic-bezier(.16,1,.3,1),
+                background .42s cubic-bezier(.16,1,.3,1);
   }
-  .play:hover { transform: scale(1.05) }
-  .play svg { width: 21px; height: 21px; fill: currentColor }
+  .play:hover {
+    transform: translateY(-3px); background: rgba(255,255,255,.085);
+    box-shadow: inset 0 0 0 1px var(--coral),
+                0 11px 0 -3px rgba(217,137,95,.16),
+                0 22px 0 -7px rgba(217,137,95,.07),
+                0 28px 54px -26px rgba(0,0,0,.95);
+  }
+  .play svg { width: 22px; height: 22px; fill: currentColor }
+  @media (prefers-reduced-motion: reduce) {
+    .play, .dl a, .vers button { transition: none }
+    .play:hover, .dl a:hover { transform: none }
+  }
 
-  .vers { display: flex; gap: 7px; flex-wrap: wrap; justify-content: center;
-          margin-top: 18px }
+  /* ⚠️ 3.8.2026 — Or: "הכפתורים בדף הזה לא כמו הכפתורים באתר המקורי שלנו".
+     He was right. The download had been brought into line earlier the same day
+     but these were left: fully-rounded chips, and the selected one a solid coral
+     fill with dark text. The site does the opposite — a glass track holding the
+     row, each pill a soft rectangle, and the selected one marked by a CORAL
+     HAIRLINE over the same glass rather than by inverting it. Filling a pill
+     with brand colour is the loudest possible way to say "selected" and it is
+     not how anything else we own says it.
+     Copied from .pills / .pill on ainsof.io, scaled down for this page's smaller
+     row. Nothing invented here. */
+  .vers { display: inline-flex; gap: 5px; flex-wrap: wrap; justify-content: center;
+          margin-top: 18px; padding: 5px; border-radius: 15px;
+          background: rgba(255,255,255,.035);
+          -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px);
+          border: 1px solid rgba(255,255,255,.09) }
   .vers button {
-    font: inherit; font-size: 12.5px; padding: 6px 14px; border-radius: 999px;
-    cursor: pointer; color: rgba(255,255,255,.75); background: rgba(255,255,255,.05);
-    border: 1px solid var(--line); transition: .12s;
+    font: inherit; font-size: 13px; font-weight: 500; letter-spacing: -.015em;
+    padding: 9px 15px; border-radius: 10px; border: 0; background: none;
+    cursor: pointer; color: var(--ink-3);
+    transition: background .3s, color .3s, box-shadow .4s cubic-bezier(.16,1,.3,1);
   }
-  .vers button:hover { background: rgba(255,255,255,.11); color: #fff }
+  .vers button:hover { color: rgba(255,255,255,.82) }
   .vers button[aria-current="true"] {
-    background: var(--coral); color: #14141a; border-color: transparent; font-weight: 600 }
+    background: rgba(255,255,255,.07); color: #fff;
+    box-shadow: inset 0 0 0 1px var(--coral),
+                0 6px 0 -2px rgba(217,137,95,.14),
+                0 12px 0 -5px rgba(217,137,95,.06) }
 
   /* Two rows now instead of one, so each has to say what it is. Without a label,
      a row reading "Drums / Guitar / Piano" looks like alternative mixes rather
      than isolated instruments. */
   .grouplbl { margin: 22px 0 -4px; font-size: 10.5px; letter-spacing: .18em;
     text-transform: uppercase; color: rgba(255,255,255,.32) }
-  .vers.stems button { background: rgba(255,255,255,.03) }
-  /* Deliberately quiet. Every preview here is watermarked, so the download is a
-     convenience and not the point of the page — a loud button would read as
-     "get the master", which is exactly what this file is not. */
-  .dl { margin-top: 20px; font-size: 12.5px }
-  .dl a { color: rgba(255,255,255,.55); text-decoration: none;
-    border-bottom: 1px solid var(--line); padding-bottom: 2px; transition: .15s }
-  .dl a:hover { color: #fff; border-color: rgba(255,255,255,.4) }
-  .foot { margin-top: 24px; font-size: 12px; color: rgba(255,255,255,.38); line-height: 1.85 }
+  /* The stems row is the same control, so it gets the same track. */
+  .vers.stems { background: rgba(255,255,255,.028) }
+  /* ⚠️ 3.8.2026 — Or: "שים לב שהכפתורים האלה בדיוק אותו דבר יהיו גם בדף תצוגה
+     של הנגן מוזיקה שלנו". This was a quiet underlined link, on the reasoning that
+     a watermarked preview should not be offered like a master. That reasoning was
+     about tone and it cost us consistency: the same product now has one button in
+     three places and it has to be one button.
+     The glass button Or picked for the site, unchanged — same padding, radius,
+     inset hairline, stacked highlights and coral hover. What keeps the honesty is
+     the label and the line under it, not a weaker control. */
+  .dl { margin-top: 24px }
+  .dl a {
+    display: inline-flex; align-items: center; gap: 12px;
+    padding: 13px 24px; border-radius: 13px;
+    background: rgba(255,255,255,.055); -webkit-backdrop-filter: blur(16px);
+    backdrop-filter: blur(16px);
+    color: #fff; text-decoration: none; border: 0;
+    font: inherit; font-weight: 500; font-size: 15.5px; letter-spacing: -.02em;
+    box-shadow: inset 0 0 0 1px rgba(255,255,255,.15),
+                0 9px 0 -3px rgba(255,255,255,.05),
+                0 18px 0 -7px rgba(255,255,255,.028),
+                0 22px 46px -26px rgba(0,0,0,.9);
+    transition: transform .42s var(--ease, cubic-bezier(.16,1,.3,1)),
+                box-shadow .42s var(--ease, cubic-bezier(.16,1,.3,1)),
+                background .42s var(--ease, cubic-bezier(.16,1,.3,1));
+  }
+  .dl a span { color: var(--coral) }
+  .dl a:hover {
+    transform: translateY(-3px); background: rgba(255,255,255,.085);
+    box-shadow: inset 0 0 0 1px var(--coral),
+                0 11px 0 -3px rgba(217,137,95,.16),
+                0 22px 0 -7px rgba(217,137,95,.07),
+                0 28px 54px -26px rgba(0,0,0,.95);
+  }
+
+  /* ⚠️ Was rgba(255,255,255,.38) — 3.08:1 on this background, measured, against
+     the 4.5:1 small text needs. This is the line that says the file is not
+     cleared for release and where to write to licence it; it being the least
+     readable thing on the page was the wrong kind of quiet. #7b7b83 is 4.53:1. */
+  .foot { margin-top: 24px; font-size: 12px; color: #7b7b83; line-height: 1.85 }
   .foot a { color: var(--coral); text-decoration: none }
   .foot a:hover { text-decoration: underline }
-  .wm { display: inline-block; margin-bottom: 3px; padding: 3px 10px;
-        border-radius: 999px; background: var(--coral-dim);
-        border: 1px solid var(--line); font-size: 11px; color: var(--coral) }
+  /* ⚠️ 3.8.2026 — Or: "הסימן מים שכתוב שם שים אותו בצורה יפה ועדינה".
+     It had been a filled chip, then an outlined one. Both were still a BADGE,
+     and a badge sitting under the main button competes with it — it reads as
+     something to press, or as a warning stamped on the page.
+     The information matters and the shouting does not. So: no box, no ring, no
+     uppercase. A small coral dot, the words at reading weight, and the licence
+     line folded onto the same sentence instead of stacked under it. Quiet
+     enough to sit at the bottom of the page, still the first thing you read if
+     you are wondering whether you can use the file. */
+  .wm { color: var(--ink-2); font-size: 12.5px; letter-spacing: -.01em }
+  .wm::before { content: ""; display: inline-block; width: 5px; height: 5px;
+    border-radius: 50%; background: var(--coral); vertical-align: middle;
+    margin-right: 8px; margin-top: -2px }
 
   .err { padding: 44px 20px; color: rgba(255,255,255,.55) }
   .brand { width: 62px; height: auto; display: block; margin: 0 auto 26px;
@@ -166,11 +254,34 @@
     body { background: radial-gradient(120% 90% at 50% 0%, #fff 0%, #f1f1f4 62%);
            color: #16161c }
     .album { color: #5c5c6c }
-    .meta, .foot, .times { color: #7a7a8a }
-    .play { background: #16161c; color: #fff }
-    .vers button { color: #40404e; background: rgba(0,0,0,.04);
+    /* #7a7a8a measured 3.74:1 here. #6d6d7b is 4.52:1 at the same weight. */
+    .meta, .foot, .times { color: #6d6d7b }
+    /* ⚠️ .wm sets its own colour from --ink-2 (#9d9da8), which is tuned for the
+       dark page and measures 2.38:1 on this one — below the 4.5:1 that small
+       text needs, so the licence notice would be the least readable line on the
+       page in the one theme where it matters most. #6b6b79 is 4.65:1 and keeps
+       the same quiet weight. */
+    .wm { color: #6b6b79 }
+    /* Glass built from white alpha reads as a hole on a light background. */
+    .play { background: rgba(0,0,0,.045); color: var(--coral);
+      box-shadow: inset 0 0 0 1px rgba(0,0,0,.12),
+                  0 10px 26px -18px rgba(0,0,0,.5) }
+    .play:hover { background: rgba(0,0,0,.07);
+      box-shadow: inset 0 0 0 1px var(--coral),
+                  0 14px 30px -18px rgba(0,0,0,.55) }
+    /* The glass button reads as a hole on a light background — it is built from
+       white at low alpha. Same geometry, inverted ink. */
+    .dl a { background: rgba(0,0,0,.045); color: #14141a;
+      box-shadow: inset 0 0 0 1px rgba(0,0,0,.12),
+                  0 10px 26px -18px rgba(0,0,0,.5) }
+    .dl a:hover { background: rgba(0,0,0,.07);
+      box-shadow: inset 0 0 0 1px var(--coral),
+                  0 14px 30px -18px rgba(0,0,0,.55) }
+    .vers { background: rgba(0,0,0,.035); border-color: rgba(0,0,0,.1) }
+    .vers button { color: #40404e; background: none;
                    border-color: rgba(0,0,0,.11) }
-    .vers button[aria-current="true"] { background: #16161c; color: #fff }
+    .vers button[aria-current="true"] { background: rgba(0,0,0,.06); color: #14141a;
+      box-shadow: inset 0 0 0 1px var(--coral) }
   }
 </style>
 </head>
@@ -439,9 +550,9 @@ async function main() {
         `<button data-v="${esc(s.v)}" ${s.v === start ? 'aria-current="true"' : ""}>${
           esc(s.t)}</button>`).join("")}</div>` : ""}
     <audio id="a" preload="auto"></audio>
-    <p class="dl"><a id="dl" download>Download this version</a></p>
-    <p class="foot"><span class="wm">Watermarked preview</span><br>
-      Not licensed for release. To licence this cue —
+    <p class="dl"><a id="dl" download>Download this version <span>&darr;</span></a></p>
+    <p class="foot"><span class="wm">Watermarked preview</span>
+      &mdash; not licensed for release.<br>To licence this cue,
       <a href="mailto:info@ainsof.io?subject=${encodeURIComponent(title + " — licensing")}"
         >info@ainsof.io</a></p>`;
 

@@ -224,12 +224,19 @@
   .foot { margin-top: 24px; font-size: 12px; color: rgba(255,255,255,.38); line-height: 1.85 }
   .foot a { color: var(--coral); text-decoration: none }
   .foot a:hover { text-decoration: underline }
-  /* Same construction as the site's "Soon" tag: coral type inside a coral-dim
-     ring, no fill. A filled chip reads as a button you can press. */
-  .wm { display: inline-block; margin-bottom: 3px; padding: 3px 10px;
-        border-radius: 999px; background: none;
-        border: 1px solid var(--coral-dim); font-size: 10.5px; font-weight: 600;
-        letter-spacing: .14em; text-transform: uppercase; color: var(--coral) }
+  /* ⚠️ 3.8.2026 — Or: "הסימן מים שכתוב שם שים אותו בצורה יפה ועדינה".
+     It had been a filled chip, then an outlined one. Both were still a BADGE,
+     and a badge sitting under the main button competes with it — it reads as
+     something to press, or as a warning stamped on the page.
+     The information matters and the shouting does not. So: no box, no ring, no
+     uppercase. A small coral dot, the words at reading weight, and the licence
+     line folded onto the same sentence instead of stacked under it. Quiet
+     enough to sit at the bottom of the page, still the first thing you read if
+     you are wondering whether you can use the file. */
+  .wm { color: var(--ink-2); font-size: 12.5px; letter-spacing: -.01em }
+  .wm::before { content: ""; display: inline-block; width: 5px; height: 5px;
+    border-radius: 50%; background: var(--coral); vertical-align: middle;
+    margin-right: 8px; margin-top: -2px }
 
   .err { padding: 44px 20px; color: rgba(255,255,255,.55) }
   .brand { width: 62px; height: auto; display: block; margin: 0 auto 26px;
@@ -533,8 +540,8 @@ async function main() {
           esc(s.t)}</button>`).join("")}</div>` : ""}
     <audio id="a" preload="auto"></audio>
     <p class="dl"><a id="dl" download>Download this version <span>&darr;</span></a></p>
-    <p class="foot"><span class="wm">Watermarked preview</span><br>
-      Not licensed for release. To licence this cue —
+    <p class="foot"><span class="wm">Watermarked preview</span>
+      &mdash; not licensed for release.<br>To licence this cue,
       <a href="mailto:info@ainsof.io?subject=${encodeURIComponent(title + " — licensing")}"
         >info@ainsof.io</a></p>`;
 

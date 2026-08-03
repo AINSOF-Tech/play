@@ -140,13 +140,39 @@
   .grouplbl { margin: 22px 0 -4px; font-size: 10.5px; letter-spacing: .18em;
     text-transform: uppercase; color: rgba(255,255,255,.32) }
   .vers.stems button { background: rgba(255,255,255,.03) }
-  /* Deliberately quiet. Every preview here is watermarked, so the download is a
-     convenience and not the point of the page — a loud button would read as
-     "get the master", which is exactly what this file is not. */
-  .dl { margin-top: 20px; font-size: 12.5px }
-  .dl a { color: rgba(255,255,255,.55); text-decoration: none;
-    border-bottom: 1px solid var(--line); padding-bottom: 2px; transition: .15s }
-  .dl a:hover { color: #fff; border-color: rgba(255,255,255,.4) }
+  /* ⚠️ 3.8.2026 — Or: "שים לב שהכפתורים האלה בדיוק אותו דבר יהיו גם בדף תצוגה
+     של הנגן מוזיקה שלנו". This was a quiet underlined link, on the reasoning that
+     a watermarked preview should not be offered like a master. That reasoning was
+     about tone and it cost us consistency: the same product now has one button in
+     three places and it has to be one button.
+     The glass button Or picked for the site, unchanged — same padding, radius,
+     inset hairline, stacked highlights and coral hover. What keeps the honesty is
+     the label and the line under it, not a weaker control. */
+  .dl { margin-top: 24px }
+  .dl a {
+    display: inline-flex; align-items: center; gap: 12px;
+    padding: 13px 24px; border-radius: 13px;
+    background: rgba(255,255,255,.055); -webkit-backdrop-filter: blur(16px);
+    backdrop-filter: blur(16px);
+    color: #fff; text-decoration: none; border: 0;
+    font: inherit; font-weight: 500; font-size: 15.5px; letter-spacing: -.02em;
+    box-shadow: inset 0 0 0 1px rgba(255,255,255,.15),
+                0 9px 0 -3px rgba(255,255,255,.05),
+                0 18px 0 -7px rgba(255,255,255,.028),
+                0 22px 46px -26px rgba(0,0,0,.9);
+    transition: transform .42s var(--ease, cubic-bezier(.16,1,.3,1)),
+                box-shadow .42s var(--ease, cubic-bezier(.16,1,.3,1)),
+                background .42s var(--ease, cubic-bezier(.16,1,.3,1));
+  }
+  .dl a span { color: var(--coral) }
+  .dl a:hover {
+    transform: translateY(-3px); background: rgba(255,255,255,.085);
+    box-shadow: inset 0 0 0 1px var(--coral),
+                0 11px 0 -3px rgba(217,137,95,.16),
+                0 22px 0 -7px rgba(217,137,95,.07),
+                0 28px 54px -26px rgba(0,0,0,.95);
+  }
+  @media (prefers-reduced-motion: reduce) { .dl a { transition: none } }
   .foot { margin-top: 24px; font-size: 12px; color: rgba(255,255,255,.38); line-height: 1.85 }
   .foot a { color: var(--coral); text-decoration: none }
   .foot a:hover { text-decoration: underline }
@@ -168,6 +194,14 @@
     .album { color: #5c5c6c }
     .meta, .foot, .times { color: #7a7a8a }
     .play { background: #16161c; color: #fff }
+    /* The glass button reads as a hole on a light background — it is built from
+       white at low alpha. Same geometry, inverted ink. */
+    .dl a { background: rgba(0,0,0,.045); color: #14141a;
+      box-shadow: inset 0 0 0 1px rgba(0,0,0,.12),
+                  0 10px 26px -18px rgba(0,0,0,.5) }
+    .dl a:hover { background: rgba(0,0,0,.07);
+      box-shadow: inset 0 0 0 1px var(--coral),
+                  0 14px 30px -18px rgba(0,0,0,.55) }
     .vers button { color: #40404e; background: rgba(0,0,0,.04);
                    border-color: rgba(0,0,0,.11) }
     .vers button[aria-current="true"] { background: #16161c; color: #fff }
@@ -439,7 +473,7 @@ async function main() {
         `<button data-v="${esc(s.v)}" ${s.v === start ? 'aria-current="true"' : ""}>${
           esc(s.t)}</button>`).join("")}</div>` : ""}
     <audio id="a" preload="auto"></audio>
-    <p class="dl"><a id="dl" download>Download this version</a></p>
+    <p class="dl"><a id="dl" download>Download this version <span>&darr;</span></a></p>
     <p class="foot"><span class="wm">Watermarked preview</span><br>
       Not licensed for release. To licence this cue —
       <a href="mailto:info@ainsof.io?subject=${encodeURIComponent(title + " — licensing")}"

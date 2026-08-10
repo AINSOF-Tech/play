@@ -1,0 +1,244 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow">
+<meta name="referrer" content="no-referrer">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none';
+  script-src 'unsafe-inline'; style-src 'unsafe-inline';
+  img-src https://ainsof.io; font-src https://ainsof.io;
+  connect-src https://mcp.ainsof.io https://xzckjzlmbdnvsxknbwea.supabase.co;
+  base-uri 'none'; form-action 'none'; object-src 'none'">
+<meta name="theme-color" content="#101013">
+<title>Upload a video — AINSOF</title>
+<link rel="icon" type="image/png" href="https://ainsof.io/favicon-96x96-v2.png" sizes="96x96">
+<style>
+  @font-face{font-family:'Geist';font-style:normal;font-weight:100 900;
+    font-display:swap;src:url('https://ainsof.io/geist.woff2') format('woff2')}
+  :root{color-scheme:dark;--bg:#101013;--surface:#17171b;
+    --line:rgba(255,255,255,.1);--ink:#fff;--ink2:#a3a3ad;
+    --ink3:#686873;--coral:#d9895f;--danger:#ef9a9a}
+  *{box-sizing:border-box}
+  [hidden]{display:none!important}
+  body{margin:0;min-height:100vh;padding:28px 20px 40px;background:
+    radial-gradient(100% 80% at 50% -10%,#25252b 0%,var(--bg) 62%);
+    color:var(--ink);font:400 16px/1.55 'Geist',ui-sans-serif,-apple-system,
+    system-ui,"Segoe UI",sans-serif;letter-spacing:-.014em}
+  .top{width:min(100%,960px);margin:0 auto 54px}
+  .top img{display:block;width:auto;height:26px}
+  main{width:min(100%,600px);margin:0 auto}
+  .eyebrow{margin:0 0 12px;color:var(--coral);font-size:12px;font-weight:650;
+    letter-spacing:.16em;text-transform:uppercase}
+  h1{margin:0 0 14px;font-size:clamp(34px,7vw,54px);font-weight:560;
+    line-height:1.03;letter-spacing:-.045em}
+  .lede{margin:0 0 34px;color:var(--ink2);font-size:18px;max-width:52ch}
+  .panel{padding:26px;border:1px solid var(--line);border-radius:18px;
+    background:rgba(255,255,255,.035);box-shadow:0 26px 70px rgba(0,0,0,.3)}
+  .pick{display:flex;align-items:center;gap:16px;min-height:88px;padding:18px;
+    border:1px dashed rgba(255,255,255,.22);border-radius:14px;
+    background:rgba(255,255,255,.025);cursor:pointer;transition:.25s ease}
+  .pick:hover,.pick:focus-within{border-color:var(--coral);
+    background:rgba(217,137,95,.07)}
+  .pick input{position:absolute;width:1px;height:1px;overflow:hidden;
+    clip:rect(0 0 0 0);white-space:nowrap}
+  .plus{display:grid;place-items:center;width:44px;height:44px;flex:none;
+    border-radius:12px;background:rgba(255,255,255,.07);color:var(--coral);
+    font-size:27px;font-weight:300}
+  .pick strong{display:block;font-size:16px;font-weight:600;color:var(--ink)}
+  .pick small{display:block;margin-top:3px;color:var(--ink3);font-size:13px}
+  .chosen{margin:14px 0 0;color:var(--ink2);font-size:14px;overflow-wrap:anywhere}
+  button{width:100%;margin-top:18px;padding:14px 18px;border:0;border-radius:12px;
+    background:var(--ink);color:#111;font:650 15px/1 'Geist',sans-serif;
+    cursor:pointer;transition:opacity .2s ease,transform .2s ease}
+  button:hover:not(:disabled){transform:translateY(-1px)}
+  button:disabled{cursor:not-allowed;opacity:.36}
+  .progress{height:5px;margin-top:18px;border-radius:99px;overflow:hidden;
+    background:rgba(255,255,255,.08)}
+  .progress span{display:block;width:0;height:100%;background:var(--coral);
+    transition:width .2s linear}
+  .status{margin:15px 0 0;color:var(--ink2);font-size:14px}
+  .status.error{color:var(--danger)}
+  .done{padding:30px;text-align:center}
+  .done .mark{display:grid;place-items:center;width:54px;height:54px;margin:0 auto 18px;
+    border-radius:50%;border:1px solid var(--coral);color:var(--coral);font-size:25px}
+  .done h2{margin:0 0 8px;font-size:25px;font-weight:570;letter-spacing:-.025em}
+  .done p{margin:0;color:var(--ink2)}
+  .privacy{margin:24px 2px 0;color:var(--ink3);font-size:13px;line-height:1.65}
+  footer{width:min(100%,600px);margin:54px auto 0;padding-top:20px;
+    border-top:1px solid var(--line);color:var(--ink3);font-size:13px}
+  footer a{color:var(--ink2);text-decoration:none}
+  @media(max-width:540px){body{padding:22px 16px 32px}.top{margin-bottom:38px}
+    .panel{padding:18px}.pick{align-items:flex-start}}
+</style>
+</head>
+<body>
+  <header class="top">
+    <a href="https://ainsof.io" aria-label="AINSOF home">
+      <img src="https://ainsof.io/wordmark.png" width="520" height="116" alt="AINSOF">
+    </a>
+  </header>
+
+  <main>
+    <p class="eyebrow">Secure video handoff</p>
+    <h1>Upload your video.</h1>
+    <p class="lede">Choose the file from this device. It goes directly to private
+      AINSOF storage and does not pass through your AI conversation.</p>
+
+    <section class="panel" id="uploadPanel" aria-labelledby="uploadTitle">
+      <label class="pick" for="videoFile">
+        <input id="videoFile" type="file" accept="video/*,.mp4,.mov,.m4v,.webm">
+        <span class="plus" aria-hidden="true">+</span>
+        <span><strong id="uploadTitle">Choose a video file</strong>
+          <small>MP4, MOV, M4V or WebM · up to 1 GB</small></span>
+      </label>
+      <p class="chosen" id="chosen" hidden></p>
+      <button id="uploadButton" type="button" disabled>Upload securely</button>
+      <div class="progress" id="progress" hidden aria-hidden="true"><span></span></div>
+      <p class="status" id="status" role="status" aria-live="polite">Checking this upload link…</p>
+    </section>
+
+    <section class="panel done" id="donePanel" hidden>
+      <div class="mark" aria-hidden="true">✓</div>
+      <h2>Your video is ready.</h2>
+      <p>Return to your AI chat and say that the upload finished. AINSOF can take it from there.</p>
+    </section>
+
+    <p class="privacy">The original upload is deleted after it is used, or within
+      two hours if it is never used. Scored outputs expire after seven days. This
+      page contains no advertising or third-party analytics.</p>
+  </main>
+
+  <footer>Need help? <a href="mailto:info@ainsof.io">info@ainsof.io</a></footer>
+
+<script>
+(() => {
+  'use strict';
+  const API = 'https://mcp.ainsof.io';
+  const MAX_BYTES = 1073741824;
+  const MIME_BY_EXTENSION = {
+    mp4: 'video/mp4', mov: 'video/quicktime',
+    m4v: 'video/x-m4v', webm: 'video/webm'
+  };
+  const ALLOWED_MIMES = new Set(Object.values(MIME_BY_EXTENSION));
+  const uid = new URLSearchParams(location.search).get('u') || '';
+  const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  const file = document.getElementById('videoFile');
+  const button = document.getElementById('uploadButton');
+  const chosen = document.getElementById('chosen');
+  const status = document.getElementById('status');
+  const progress = document.getElementById('progress');
+  const bar = progress.querySelector('span');
+  const uploadPanel = document.getElementById('uploadPanel');
+  const donePanel = document.getElementById('donePanel');
+  let target = null;
+  let selectedMime = null;
+
+  function message(text, error = false) {
+    status.textContent = text;
+    status.classList.toggle('error', error);
+  }
+
+  function complete() {
+    uploadPanel.hidden = true;
+    donePanel.hidden = false;
+  }
+
+  async function prepare() {
+    if (!uuid.test(uid)) {
+      message('This upload link is not valid. Ask AINSOF for a new one.', true);
+      return;
+    }
+    try {
+      const response = await fetch(`${API}/upload/${uid}/target`, {
+        cache: 'no-store', credentials: 'omit'
+      });
+      const body = await response.json().catch(() => ({}));
+      if (body.error === 'already_uploaded') {
+        complete();
+        return;
+      }
+      if (!response.ok || !body.put_url) {
+        const words = body.error === 'expired'
+          ? 'This upload link expired. Ask AINSOF for a new one.'
+          : body.error === 'already_used'
+            ? 'This upload link has already been used.'
+            : 'This upload link is unavailable. Ask AINSOF for a new one.';
+        message(words, true);
+        return;
+      }
+      target = body;
+      message('The secure upload link is ready.');
+      button.disabled = !selectedMime;
+    } catch (_) {
+      message('Could not reach AINSOF. Check your connection and try again.', true);
+    }
+  }
+
+  file.addEventListener('change', () => {
+    const selected = file.files[0];
+    if (!selected) {
+      selectedMime = null;
+      chosen.hidden = true;
+      button.disabled = true;
+      return;
+    }
+    const extension = selected.name.split('.').pop().toLowerCase();
+    const browserMime = (selected.type || '').toLowerCase();
+    selectedMime = ALLOWED_MIMES.has(browserMime)
+      ? browserMime : (MIME_BY_EXTENSION[extension] || null);
+    chosen.textContent = `${selected.name} · ${Math.max(1, Math.round(selected.size / 1048576))} MB`;
+    chosen.hidden = false;
+    if (!selectedMime) {
+      message('Choose an MP4, MOV, M4V or WebM video.', true);
+      button.disabled = true;
+      return;
+    }
+    if (selected.size > MAX_BYTES) {
+      message('This file is larger than the 1 GB upload limit.', true);
+      selectedMime = null;
+      button.disabled = true;
+      return;
+    }
+    message(target ? 'Ready to upload securely.' : 'Checking this upload link…');
+    button.disabled = !target;
+  });
+
+  button.addEventListener('click', () => {
+    const selected = file.files[0];
+    if (!selected || !selectedMime || !target || !target.put_url) return;
+    button.disabled = true;
+    file.disabled = true;
+    progress.hidden = false;
+    bar.style.width = '2%';
+    message('Uploading… keep this page open.');
+
+    const request = new XMLHttpRequest();
+    request.open('PUT', target.put_url);
+    request.setRequestHeader('content-type', selectedMime);
+    request.upload.addEventListener('progress', (event) => {
+      if (event.lengthComputable) bar.style.width = `${Math.max(2, Math.round(event.loaded / event.total * 100))}%`;
+    });
+    request.addEventListener('load', () => {
+      if (request.status === 200 || request.status === 201) {
+        bar.style.width = '100%';
+        complete();
+      } else {
+        file.disabled = false;
+        button.disabled = false;
+        message(`The upload was refused (${request.status}). Try a new link.`, true);
+      }
+    });
+    request.addEventListener('error', () => {
+      file.disabled = false;
+      button.disabled = false;
+      message('The upload lost its connection. Try again.', true);
+    });
+    request.send(selected);
+  });
+
+  prepare();
+})();
+</script>
+</body>
+</html>

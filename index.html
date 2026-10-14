@@ -19,11 +19,10 @@
   were hearing. So the file is decoded with the Web Audio API and the peaks are
   measured from the samples. What is drawn IS the audio.
 
-  ⚠️ The file is fetched ONCE. decodeAudioData needs an ArrayBuffer and the
-  <audio> element needs a URL, and doing those separately downloads two megabytes
-  twice. One fetch, a Blob URL for playback, and a copy of the buffer for the
-  decoder — copied deliberately, because decodeAudioData detaches what it is
-  given and the Blob would be reading from a corpse.
+  Catalogue waveforms use measured, version-specific peaks and native streaming:
+  neither the waveform nor playback waits for the complete MP3 to download.
+  If this exact version has no measured peaks yet, keep the original single-file
+  decode path below. Never borrow the full mix waveform for a cut or a stem.
 
   ⚠️ ONE page for the whole catalogue, not one per track. Or asked directly:
   "לכל טראק נעשה דף?". 772 generated pages go stale on the next release; this
@@ -414,6 +413,7 @@ function drawWave(canvas, data, progress) {
 
 let audio, canvas, wrap, data = null, objectUrl = null, _ac = null;
 let audioLoad = 0, pageLoad = 0, ticking = false;
+let cancelPendingAudio = null;
 // A source replacement pauses the element without a user pause. Keep the
 // requested transport state across overlapping version fetches and decoders.
 let playbackWanted = false;
@@ -428,6 +428,9 @@ function paintPlayback() {
 async function resumeAudio(request, page) {
   if (!playbackWanted || request !== audioLoad || page !== pageLoad) return;
   const target = audio;
+  // An initial click while the candidate is loading expresses intent, not a
+  // failed attempt to play an empty media element.
+  if (!target.src) return;
   try { await target.play(); }
   catch (_) {
     if (request === audioLoad && page === pageLoad && target === audio && target.paused) {
@@ -449,18 +452,121 @@ function ctx() {
   return _ac;
 }
 
-async function loadAudio(url, ownsPage = () => true, onReady = () => {}) {
+function measuredWave(payload, core, version) {
+  const parsed = parseSlug(core + "/" + version);
+  const wave = payload?.waveform;
+  if (!parsed || payload?.ok !== true || payload.track_id !== parsed.id ||
+      payload.version !== parsed.version || wave?.points !== BARS ||
+      typeof wave.duration !== "number" || !Number.isFinite(wave.duration) || wave.duration <= 0 ||
+      typeof wave.peaks !== "string" || wave.peaks.length !== 2136) return null;
+  try {
+    const bytes = atob(wave.peaks);
+    return bytes.length === BARS ? Array.from(bytes, b => b.charCodeAt(0) / 255) : null;
+  } catch (_) { return null; }
+}
+
+function bindAudio(page) {
+  const media = audio;
+  audio.onplay = () => {
+    if (audio !== media || page !== pageLoad || media.paused) return;
+    playbackWanted = true; paintPlayback();
+  };
+  audio.onpause = () => {
+    if (audio !== media || page !== pageLoad || !media.paused) return;
+    playbackWanted = false; paintPlayback();
+  };
+  audio.onended = () => {
+    if (audio !== media || page !== pageLoad) return;
+    playbackWanted = false; paintPlayback();
+  };
+}
+
+async function loadSelectedAudio(core, version, ownsPage = () => true, onReady = () => {}) {
+  if (cancelPendingAudio) cancelPendingAudio();
   const request = ++audioLoad, target = audio, targetWrap = wrap;
   const owns = () => request === audioLoad && ownsPage() && audio === target;
   const status = document.getElementById("audio-status");
   if (status) status.textContent = "";
   targetWrap.classList.add("loading");
+  const candidate = new Audio(), controller = new AbortController();
+  let readyTimer, waveTimer, finishReady, committed = false, succeeded = false;
+  const ready = new Promise(resolve => { finishReady = resolve; });
+  const finish = ok => {
+    clearTimeout(readyTimer);
+    candidate.removeEventListener("canplay", onCanPlay);
+    candidate.removeEventListener("error", onError);
+    finishReady(ok);
+  };
+  const onCanPlay = () => finish(Number.isFinite(candidate.duration) && candidate.duration > 0);
+  const onError = () => finish(false);
+  const cancel = () => {
+    controller.abort(); clearTimeout(waveTimer); finish(false);
+    if (!committed) { candidate.pause(); candidate.removeAttribute("src"); candidate.load(); }
+  };
+  cancelPendingAudio = cancel;
+  candidate.preload = "auto";
+  candidate.addEventListener("canplay", onCanPlay);
+  candidate.addEventListener("error", onError);
+  readyTimer = setTimeout(onError, 12000);
+  waveTimer = setTimeout(() => controller.abort(), 4000);
+  const waveRequest = fetch(API + "/player-data/" + core + "/" + version,
+    {signal:controller.signal, credentials:"omit"})
+    .then(r => r.ok ? r.json() : null)
+    .then(payload => measuredWave(payload, core, version))
+    .catch(() => null)
+    .finally(() => clearTimeout(waveTimer));
+  candidate.src = audioUrl(core, version);
   try {
-    const response = await fetch(url);
+    const wave = await waveRequest;
+    if (!owns()) return false;
+    if (!wave) {
+      // Missing snapshot coverage must not remove a waveform that worked before.
+      // Stop the speculative stream before the single-download decode fallback.
+      cancel();
+      const loaded = await loadAudio(audioUrl(core, version), ownsPage, onReady, request);
+      succeeded = !!loaded;
+      return loaded;
+    }
+    if (!await ready || !owns() || candidate.error || candidate.readyState < 3) return false;
+    candidate.id = "a";
+    candidate.volume = target.volume; candidate.muted = target.muted;
+    // Swap all ownership together. Old pause/error events are guarded by media
+    // identity and cannot erase the latest explicit Play/Pause intent.
+    audio = candidate; committed = succeeded = true; bindAudio(pageLoad);
+    target.replaceWith(candidate);
+    target.pause(); target.removeAttribute("src"); target.load();
+    if (objectUrl) URL.revokeObjectURL(objectUrl);
+    objectUrl = null; data = wave;
+    onReady(); drawWave(canvas, data, 0);
+    return request;
+  } finally {
+    if (cancelPendingAudio === cancel) cancelPendingAudio = null;
+    cancel();
+    if (request === audioLoad && ownsPage()) {
+      targetWrap.classList.remove("loading");
+      if (!succeeded && status) status.textContent = "This version could not be loaded. Please try again.";
+    }
+  }
+}
+
+async function loadAudio(url, ownsPage = () => true, onReady = () => {}, request = ++audioLoad) {
+  if (typeof cancelPendingAudio === "function") cancelPendingAudio();
+  const target = audio, targetWrap = wrap;
+  const owns = () => request === audioLoad && ownsPage() && audio === target;
+  const controller = new AbortController();
+  const cancel = () => controller.abort();
+  cancelPendingAudio = cancel;
+  const status = document.getElementById("audio-status");
+  if (status) status.textContent = "";
+  targetWrap.classList.add("loading");
+  try {
+    const response = await fetch(url, {signal:AbortSignal.any([controller.signal, AbortSignal.timeout(20000)])});
     if (!owns()) return false;
     if (!response.ok) throw new Error("Audio unavailable");
+    if (Number(response.headers?.get("content-length")) > 32 * 1024 * 1024) throw new Error("Audio too large");
     const bytes = await response.arrayBuffer();
     if (!owns()) return false;
+    if (bytes.byteLength > 32 * 1024 * 1024) throw new Error("Audio too large");
     // Commit media and its selected/download identity together. An older
     // fetch or decoder must never overwrite a newer choice.
     const nextUrl = URL.createObjectURL(new Blob([bytes], { type: "audio/mpeg" }));
@@ -492,6 +598,7 @@ async function loadAudio(url, ownsPage = () => true, onReady = () => {}) {
     if (owns() && status) status.textContent = "This version could not be loaded. Please try again.";
     return false;
   } finally {
+    if (cancelPendingAudio === cancel) cancelPendingAudio = null;
     if (owns()) targetWrap.classList.remove("loading");
   }
 }
@@ -511,6 +618,7 @@ const ICON_PAUSE = '<svg viewBox="0 0 24 24"><path d="M6 5h4v14H6zM14 5h4v14h-4z
 async function main() {
   const page = ++pageLoad;
   ++audioLoad;
+  if (typeof cancelPendingAudio === "function") cancelPendingAudio();
   playbackWanted = false;
   if (audio) { audio.pause(); audio.removeAttribute("src"); audio.load(); }
   if (objectUrl) URL.revokeObjectURL(objectUrl);
@@ -621,30 +729,18 @@ async function main() {
   wrap   = document.getElementById("wave");
   const pp = document.getElementById("pp");
 
-  const media = audio;
+  bindAudio(page);
   pp.onclick = () => {
     playbackWanted = !(playbackWanted || !audio.paused);
     paintPlayback();
     if (playbackWanted) resumeAudio(audioLoad, page);
     else audio.pause();
   };
-  audio.onplay = () => {
-    if (audio !== media || page !== pageLoad || media.paused) return;
-    playbackWanted = true; paintPlayback();
-  };
-  audio.onpause = () => {
-    if (audio !== media || page !== pageLoad || !media.paused) return;
-    playbackWanted = false; paintPlayback();
-  };
-  audio.onended = () => {
-    if (audio !== media || page !== pageLoad) return;
-    playbackWanted = false; paintPlayback();
-  };
 
   wrap.onclick = (e) => {
     if (!audio.duration) return;
     const r = wrap.getBoundingClientRect();
-    audio.currentTime = ((e.clientX - r.left) / r.width) * audio.duration;
+    audio.currentTime = Math.max(0, Math.min(1, (e.clientX - r.left) / r.width)) * audio.duration;
   };
 
   /* ⚠️ The download link is rebuilt on every switch. Wiring it once to whatever
@@ -663,7 +759,7 @@ async function main() {
 
   document.querySelectorAll("[data-v]").forEach((b) => {
     b.onclick = async () => {
-      const loaded = await loadAudio(audioUrl(s, b.dataset.v), () => page === pageLoad, () => {
+      const loaded = await loadSelectedAudio(s, b.dataset.v, () => page === pageLoad, () => {
         document.querySelectorAll("[data-v]").forEach((x) => x.removeAttribute("aria-current"));
         b.setAttribute("aria-current", "true");
         setDl(b.dataset.v);
@@ -679,7 +775,7 @@ async function main() {
   playbackWanted = true;
   paintPlayback();
   const initialRequest = audioLoad + 1;
-  const loaded = await loadAudio(audioUrl(s, start), () => page === pageLoad);
+  const loaded = await loadSelectedAudio(s, start, () => page === pageLoad);
   // Autoplay is blocked until the visitor has interacted, and that is correct of
   // the browser. Arriving from a click usually counts; when it does not, the
   // waveform and a large play button are unmistakably a player — which is what

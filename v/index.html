@@ -120,13 +120,17 @@ video{display:block;width:100%;max-height:74vh;background:#000}
   var id = new URLSearchParams(location.search).get('id') || '';
   var UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
   var msg = document.getElementById('msg');
+  var frame = document.getElementById('frame');
   var row = document.getElementById('row');
   var dl  = document.getElementById('dl');
+  var failed = false;
 
   /** Both dead ends land here: nothing to play, so nothing to download either.
       "Score another" stays, because it is the only thing left that helps. */
   function dead(text){
+    failed = true;
     msg.textContent = text;
+    if (msg.parentNode !== frame) frame.appendChild(msg);
     dl.hidden = true;
     row.hidden = false;
   }
@@ -137,6 +141,7 @@ video{display:block;width:100%;max-height:74vh;background:#000}
   var v = document.createElement('video');
   v.controls = true; v.playsInline = true; v.preload = 'metadata'; v.src = src;
   v.addEventListener('loadedmetadata', function(){
+    if (failed) return;
     msg.remove();
     dl.href = src + '?dl=1';
     dl.hidden = false;
@@ -151,7 +156,7 @@ video{display:block;width:100%;max-height:74vh;background:#000}
     v.remove();
     dead('This render has expired, or the link is wrong. Ask the agent to score it again.');
   });
-  document.getElementById('frame').appendChild(v);
+  frame.appendChild(v);
 })();
 </script>
 </body>

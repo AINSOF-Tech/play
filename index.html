@@ -309,6 +309,10 @@ function label(v) {
   const m = /^CUT_(\d+)$/.exec(v);
   if (m) return `${m[1]}s`;
   if (v === "MAIN") return "Full mix";
+  const names = { NO_BRAS: "No Brass", NO_DRUM: "No Drums",
+    NO_DRUM_NO_PERCUSSION: "No Drums / No Percussion",
+    NO_DRUMS_NO_PERCUSSION: "No Drums / No Percussion" };
+  if (names[v]) return names[v];
   return v.split("_").map((w) => w[0] + w.slice(1).toLowerCase()).join(" ");
 }
 
@@ -551,9 +555,10 @@ async function main() {
           esc(s.t)}</button>`).join("")}</div>` : ""}
     <audio id="a" preload="auto"></audio>
     <p class="dl"><a id="dl" download>Download this version <span>&darr;</span></a></p>
-    <p class="foot"><span class="wm">Watermarked preview</span>
-      &mdash; not licensed for release.<br>Licensing is handled directly
-      with AINSOF &mdash; <a href="https://ainsof.io">ainsof.io</a></p>`;
+    <p class="foot"><span class="wm">Listen freely — no watermark.</span><br>
+      Sign in with Google or email to download the selected version.<br>
+      A licence is still required for release &mdash;
+      <a href="https://ainsof.io">ainsof.io</a></p>`;
 
   audio  = document.getElementById("a");
   canvas = document.getElementById("cv");
@@ -574,44 +579,14 @@ async function main() {
   /* ⚠️ The download link is rebuilt on every switch. Wiring it once to whatever
      was playing at load would hand someone the full mix while the page says
      "No Drums" — a wrong file that looks right is worse than no link at all. */
-  /* ⚠️ `download` on an <a> is ignored the moment the href is cross-origin — and
-     ours always is: /p/ answers with a 302 to signed storage on another host. The
-     attribute was there, the browser dropped it, and the link simply navigated to
-     the audio. Or: "שלוחצים להורדה זה אמור ישר להוריד, זה פותח לי עוד לינק".
-     Fetching the bytes and handing the browser a blob from this origin is what
-     actually downloads. The page already fetches the same file for the waveform,
-     so the CORS path is known to work. */
-  let dlBusy = false;
+  // Listening stays public; the explicit download uses the site's Google/email
+  // sign-in and a server-verified session, preserving the selected version.
   const setDl = (v) => {
     const dl = document.getElementById("dl");
     if (!dl) return;
-    const name = `${core}${v && v !== "MAIN" ? "_" + v : ""}.mp3`;
-    const idle = `Download ${label(v)} \u2014 watermarked`;
-    dl.textContent = idle;
-    dl.href = audioUrl(s, v);
+    dl.textContent = `Download ${label(v)} \u2014 sign in`;
+    dl.href = `https://ainsof.io/download?t=${encodeURIComponent(core)}&version=${encodeURIComponent(v || "MAIN")}`;
     dl.removeAttribute("download");
-    dl.onclick = async (e) => {
-      e.preventDefault();
-      if (dlBusy) return;
-      dlBusy = true;
-      dl.textContent = "Preparing\u2026";
-      try {
-        const blob = await (await fetch(audioUrl(s, v))).blob();
-        const u = URL.createObjectURL(blob);
-        const a = document.createElement("a");
-        a.href = u; a.download = name;
-        document.body.appendChild(a); a.click(); a.remove();
-        // Revoked on a delay: Safari has not finished reading the blob when the
-        // click returns, and revoking immediately produces a zero-byte file.
-        setTimeout(() => URL.revokeObjectURL(u), 4000);
-        dl.textContent = idle;
-      } catch (_) {
-        // A failed download must not look like a successful one.
-        dl.textContent = "Download failed \u2014 try again";
-        setTimeout(() => { dl.textContent = idle; }, 2600);
-      }
-      dlBusy = false;
-    };
   };
   setDl(start);
 

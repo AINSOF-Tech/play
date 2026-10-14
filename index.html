@@ -412,6 +412,29 @@ function drawWave(canvas, data, progress) {
 // ── page ───────────────────────────────────────────────────────────────────
 
 let audio, canvas, wrap, data = null, objectUrl = null, _ac = null;
+let audioLoad = 0, pageLoad = 0, ticking = false;
+// A source replacement pauses the element without a user pause. Keep the
+// requested transport state across overlapping version fetches and decoders.
+let playbackWanted = false;
+
+function paintPlayback() {
+  const pp = document.getElementById("pp");
+  if (!pp) return;
+  pp.innerHTML = playbackWanted ? ICON_PAUSE : ICON_PLAY;
+  pp.setAttribute("aria-label", playbackWanted ? "Pause" : "Play");
+}
+
+async function resumeAudio(request, page) {
+  if (!playbackWanted || request !== audioLoad || page !== pageLoad) return;
+  const target = audio;
+  try { await target.play(); }
+  catch (_) {
+    if (request === audioLoad && page === pageLoad && target === audio && target.paused) {
+      playbackWanted = false;
+      paintPlayback();
+    }
+  }
+}
 
 /** The page's single AudioContext, created on first use. */
 function ctx() {
@@ -425,37 +448,54 @@ function ctx() {
   return _ac;
 }
 
-async function loadAudio(url) {
-  if (objectUrl) { URL.revokeObjectURL(objectUrl); objectUrl = null; }
-  data = null;
-  wrap.classList.add("loading");
-  drawWave(canvas, new Array(BARS).fill(0.06), 0);
-
-  const bytes = await (await fetch(url)).arrayBuffer();
-
-  // Playback first: if decoding fails the music must still work.
-  objectUrl = URL.createObjectURL(new Blob([bytes], { type: "audio/mpeg" }));
-  audio.src = objectUrl;
-
+async function loadAudio(url, ownsPage = () => true, onReady = () => {}) {
+  const request = ++audioLoad, target = audio, targetWrap = wrap;
+  const owns = () => request === audioLoad && ownsPage() && audio === target;
+  const status = document.getElementById("audio-status");
+  if (status) status.textContent = "";
+  targetWrap.classList.add("loading");
   try {
+    const response = await fetch(url);
+    if (!owns()) return false;
+    if (!response.ok) throw new Error("Audio unavailable");
+    const bytes = await response.arrayBuffer();
+    if (!owns()) return false;
+    // Commit media and its selected/download identity together. An older
+    // fetch or decoder must never overwrite a newer choice.
+    const nextUrl = URL.createObjectURL(new Blob([bytes], { type: "audio/mpeg" }));
+    const previousUrl = objectUrl;
+    objectUrl = nextUrl; target.src = nextUrl; data = null;
+    if (previousUrl) URL.revokeObjectURL(previousUrl);
+    onReady();
+    drawWave(canvas, new Array(BARS).fill(0.06), 0);
+    let waveform;
+    try {
     // ⚠️ ONE AudioContext for the life of the page, not one per load. The first
     // version built a new one on every call, and a browser caps a document at
     // about six: a visitor comparing the full mix against a 30 and a 15 would
     // hit the ceiling, `new AudioContext()` would throw, and the waveform — the
     // whole point of this page — would quietly stop being drawn while playback
     // carried on. Silent degradation of the headline feature.
-    const decoded = await ctx().decodeAudioData(bytes.slice(0));
-    data = peaks(decoded, BARS);
+      const decoded = await ctx().decodeAudioData(bytes.slice(0));
+      if (!owns()) return false;
+      waveform = peaks(decoded, BARS);
+    } catch (_) {
+      if (!owns()) return false;
+      waveform = new Array(BARS).fill(0.12);
+    }
+    data = waveform;
+    drawWave(canvas, data, 0);
+    return request;
   } catch (_) {
-    // No waveform is survivable; a broken page is not.
-    data = new Array(BARS).fill(0.12);
+    if (owns() && status) status.textContent = "This version could not be loaded. Please try again.";
+    return false;
+  } finally {
+    if (owns()) targetWrap.classList.remove("loading");
   }
-  wrap.classList.remove("loading");
-  drawWave(canvas, data, 0);
 }
 
 function tick() {
-  if (data && audio.duration) {
+  if (data && audio && audio.duration) {
     drawWave(canvas, data, audio.currentTime / audio.duration);
     document.getElementById("t-now").textContent = clock(audio.currentTime);
     document.getElementById("t-end").textContent = clock(audio.duration);
@@ -467,6 +507,12 @@ const ICON_PLAY  = '<svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>';
 const ICON_PAUSE = '<svg viewBox="0 0 24 24"><path d="M6 5h4v14H6zM14 5h4v14h-4z"/></svg>';
 
 async function main() {
+  const page = ++pageLoad;
+  ++audioLoad;
+  playbackWanted = false;
+  if (audio) { audio.pause(); audio.removeAttribute("src"); audio.load(); }
+  if (objectUrl) URL.revokeObjectURL(objectUrl);
+  objectUrl = null; data = null;
   const raw = slug();
   const parsed = parseSlug(raw);
   if (!parsed) {
@@ -496,6 +542,7 @@ async function main() {
     });
     t = JSON.parse((await res.json()).result.content[0].text);
   } catch (_) { /* the music still has to play without the credits */ }
+  if (page !== pageLoad) return;
 
   const c = t?.credits ?? {};
   /* ⚠️ get_track answers {ok, credits, track, cue_sheet_available, licensing} —
@@ -545,6 +592,7 @@ async function main() {
     ${bits.length ? `<p class="meta">${bits.map((b) => `<span>${esc(b)}</span>`)
                        .join("&nbsp; · &nbsp;")}</p>` : ""}
     <div class="wave loading" id="wave"><canvas id="cv"></canvas></div>
+    <p class="hint" id="audio-status" role="status" aria-live="polite"></p>
     <div class="times"><span id="t-now">0:00</span><span id="t-end">0:00</span></div>
     <div class="row"><button class="play" id="pp" aria-label="Play">${ICON_PLAY}</button></div>
     ${all.length > 1 ? `<p class="grouplbl">Versions</p><div class="vers">${all.map((v) =>
@@ -565,10 +613,25 @@ async function main() {
   wrap   = document.getElementById("wave");
   const pp = document.getElementById("pp");
 
-  pp.onclick = () => audio.paused ? audio.play() : audio.pause();
-  audio.onplay  = () => { pp.innerHTML = ICON_PAUSE; pp.setAttribute("aria-label", "Pause"); };
-  audio.onpause = () => { pp.innerHTML = ICON_PLAY;  pp.setAttribute("aria-label", "Play"); };
-  audio.onended = () => { pp.innerHTML = ICON_PLAY; };
+  const media = audio;
+  pp.onclick = () => {
+    playbackWanted = !(playbackWanted || !audio.paused);
+    paintPlayback();
+    if (playbackWanted) resumeAudio(audioLoad, page);
+    else audio.pause();
+  };
+  audio.onplay = () => {
+    if (audio !== media || page !== pageLoad || media.paused) return;
+    playbackWanted = true; paintPlayback();
+  };
+  audio.onpause = () => {
+    if (audio !== media || page !== pageLoad || !media.paused) return;
+    playbackWanted = false; paintPlayback();
+  };
+  audio.onended = () => {
+    if (audio !== media || page !== pageLoad) return;
+    playbackWanted = false; paintPlayback();
+  };
 
   wrap.onclick = (e) => {
     if (!audio.duration) return;
@@ -592,25 +655,31 @@ async function main() {
 
   document.querySelectorAll("[data-v]").forEach((b) => {
     b.onclick = async () => {
-      document.querySelectorAll("[data-v]").forEach((x) => x.removeAttribute("aria-current"));
-      b.setAttribute("aria-current", "true");
-      setDl(b.dataset.v);
-      const wasPlaying = !audio.paused;
-      await loadAudio(audioUrl(s, b.dataset.v));
-      if (wasPlaying) audio.play().catch(() => {});
+      const loaded = await loadAudio(audioUrl(s, b.dataset.v), () => page === pageLoad, () => {
+        document.querySelectorAll("[data-v]").forEach((x) => x.removeAttribute("aria-current"));
+        b.setAttribute("aria-current", "true");
+        setDl(b.dataset.v);
+      });
+      if (loaded) await resumeAudio(loaded, page);
     };
   });
 
   addEventListener("resize", () => data && drawWave(canvas, data,
     audio.duration ? audio.currentTime / audio.duration : 0));
 
-  tick();
-  await loadAudio(audioUrl(s, start));
+  if (!ticking) { ticking = true; tick(); }
+  playbackWanted = true;
+  paintPlayback();
+  const initialRequest = audioLoad + 1;
+  const loaded = await loadAudio(audioUrl(s, start), () => page === pageLoad);
   // Autoplay is blocked until the visitor has interacted, and that is correct of
   // the browser. Arriving from a click usually counts; when it does not, the
   // waveform and a large play button are unmistakably a player — which is what
   // the blank tab this replaced was missing.
-  audio.play().catch(() => {});
+  if (loaded) await resumeAudio(loaded, page);
+  else if (initialRequest === audioLoad && page === pageLoad && audio.paused) {
+    playbackWanted = false; paintPlayback();
+  }
 }
 
 addEventListener("hashchange", main);

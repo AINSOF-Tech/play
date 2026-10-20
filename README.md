@@ -2,7 +2,7 @@
 
 The page behind every listen link the AINSOF agent hands out.
 
-**One page for the whole catalogue.** The cue is read from the address fragment
+**One page for the whole catalog.** The cue is read from the address fragment
 and everything else — artwork, credits, audio — is fetched live, so a new album
 works the day it lands with nothing to regenerate.
 
@@ -10,7 +10,7 @@ works the day it lands with nothing to regenerate.
 https://play.ainsof.io/#AIN-CAT_057_001
 ```
 
-It shows the album art, the title, the album and catalogue number, the composer,
+It shows the album art, the title, the album and catalog number, the composer,
 the tempo and the length, and draws a **real** waveform: the file is decoded with
 the Web Audio API and the peaks are measured from the samples. Click the waveform
 to seek.

@@ -196,6 +196,7 @@
      inset hairline, stacked highlights and coral hover. What keeps the honesty is
      the label and the line under it, not a weaker control. */
   .dl { margin-top: 24px }
+  .dl a[hidden] { display: none }
   .dl a {
     display: inline-flex; align-items: center; gap: 12px;
     padding: 13px 24px; border-radius: 13px;
@@ -718,7 +719,7 @@ async function main() {
         `<button data-v="${esc(s.v)}" ${s.v === start ? 'aria-current="true"' : ""}>${
           esc(s.t)}</button>`).join("")}</div>` : ""}
     <audio id="a" preload="auto"></audio>
-    <p class="dl"><a id="dl" download>Download this version <span>&darr;</span></a></p>
+    <p class="dl"><a id="dl" download>Download this version <span>&darr;</span></a> <a id="dlw" hidden>WAV <span>&darr;</span></a></p>
     <p class="foot"><span class="wm">Listen freely — no watermark.</span><br>
       Sign in with Google or email to download the selected version.<br>
       A license is still required for release &mdash;
@@ -748,12 +749,20 @@ async function main() {
      "No Drums" — a wrong file that looks right is worse than no link at all. */
   // Listening stays public; the explicit download uses the site's Google/email
   // sign-in and a server-verified session, preserving the selected version.
+  // Two choices, named only "MP3" and "WAV" (Or, 26.10.2026), for every version AND stem
+  // ("גרסאות, סטמים הכל הכל").
   const setDl = (v) => {
     const dl = document.getElementById("dl");
     if (!dl) return;
-    dl.textContent = `Download ${label(v)} \u2014 sign in`;
-    dl.href = `https://ainsof.io/download?t=${encodeURIComponent(core)}&version=${encodeURIComponent(v || "MAIN")}`;
+    const base = `https://ainsof.io/download?t=${encodeURIComponent(core)}&version=${encodeURIComponent(v || "MAIN")}&from=play`;
+    dl.textContent = `Download ${label(v)} MP3 \u2014 sign in`;
+    dl.href = base;
     dl.removeAttribute("download");
+    const w = document.getElementById("dlw");
+    if (!w) return;
+    w.hidden = false;
+    w.textContent = "WAV \u2014 sign in";
+    w.href = `${base}&format=wav`;
   };
   setDl(start);
 

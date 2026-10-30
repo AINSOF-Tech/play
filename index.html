@@ -3,6 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
+<!-- GitHub Pages cannot send security headers, so the policy rides in the page (30.10.2026 security review). -->
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' https: data: blob:; media-src https: blob:; connect-src https://mcp.ainsof.io https://ainsof.io https://*.supabase.co https://*.ainsof.io; font-src 'self' data:; object-src 'none'; base-uri 'self'; form-action 'self'">
 <title>AINSOF</title>
 <link rel="icon" type="image/png" href="/favicon-96x96.png" sizes="96x96">
 <link rel="icon" type="image/svg+xml" href="/favicon.svg">
